@@ -58,7 +58,7 @@ public static class PackageDetector
         try
         {
             var result = ProcessRunner.RunProcess(
-                "winget",
+                ProcessRunner.ResolveWingetExecutable(),
                 $"list --id {PhoenixTunerPackageId}",
                 TimeSpan.FromMinutes(2));
 
@@ -75,7 +75,10 @@ public static class PackageDetector
     {
         try
         {
-            var result = ProcessRunner.RunProcess("winget", "--version", TimeSpan.FromSeconds(30));
+            var result = ProcessRunner.RunProcess(
+                ProcessRunner.ResolveWingetExecutable(),
+                "--version",
+                TimeSpan.FromSeconds(30));
             return result.ExitCode == 0;
         }
         catch

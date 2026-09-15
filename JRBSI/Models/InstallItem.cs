@@ -16,6 +16,7 @@ public enum InstallStatus
 public enum InstallMethod
 {
     EmbeddedExe,
+    EmbeddedWinget,
     Winget
 }
 

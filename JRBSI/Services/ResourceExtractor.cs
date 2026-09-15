@@ -9,6 +9,11 @@ public static class ResourceExtractor
 
     public static string ExtractEmbeddedExe(string resourceName, string fileName)
     {
+        return ExtractEmbeddedResource(resourceName, fileName);
+    }
+
+    public static string ExtractEmbeddedResource(string resourceName, string fileName)
+    {
         Directory.CreateDirectory(TempDirectory);
 
         var destinationPath = Path.Combine(TempDirectory, fileName);

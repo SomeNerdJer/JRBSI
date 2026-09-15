@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Installers\*.exe" />
+    <EmbeddedResource Include="Installers\Winget\*" />
   </ItemGroup>
 
   <ItemGroup>

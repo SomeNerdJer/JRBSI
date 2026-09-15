@@ -3,3 +3,4 @@ JRBSI/Installers/CursorSetup.exe filter=lfs diff=lfs merge=lfs -text
 JRBSI/bin/**/JRBSI.dll filter=lfs diff=lfs merge=lfs -text
 JRBSI/obj/**/JRBSI.dll filter=lfs diff=lfs merge=lfs -text
 JRBSI/bin/**/publish/JRBSI.exe filter=lfs diff=lfs merge=lfs -text
+JRBSI/Installers/Winget/** filter=lfs diff=lfs merge=lfs -text

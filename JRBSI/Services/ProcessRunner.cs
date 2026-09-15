@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 
 namespace JRBSI.Services;
@@ -8,6 +9,25 @@ public sealed record ProcessResult(int ExitCode, string StandardOutput, string S
 public static class ProcessRunner
 {
     public const int WingetAlreadyInstalledExitCode = unchecked((int)0x8B15000B);
+
+    public static void RefreshPathEnvironment()
+    {
+        var machine = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine) ?? string.Empty;
+        var user = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User) ?? string.Empty;
+        Environment.SetEnvironmentVariable("PATH", $"{machine};{user}");
+    }
+
+    public static string ResolveWingetExecutable()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var aliasPath = Path.Combine(localAppData, "Microsoft", "WindowsApps", "winget.exe");
+        if (File.Exists(aliasPath))
+        {
+            return aliasPath;
+        }
+
+        return "winget";
+    }
 
     public static ProcessResult RunProcess(string fileName, string arguments, TimeSpan timeout)
     {
@@ -87,6 +107,6 @@ public static class ProcessRunner
     {
         var arguments =
             $"install \"{packageName}\" --silent --accept-source-agreements --accept-package-agreements --disable-interactivity";
-        return RunProcess("winget", arguments, timeout);
+        return RunProcess(ResolveWingetExecutable(), arguments, timeout);
     }
 }

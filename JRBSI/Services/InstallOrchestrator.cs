@@ -7,10 +7,17 @@ public sealed class InstallOrchestrator
     public const string WpilibUrl =
         "https://docs.wpilib.org/en/stable/docs/zero-to-robot/step-2/wpilib-setup.html";
 
+    public const string WaitingForWingetMessage = "Will be installed after winget is available";
+
     public IReadOnlyList<InstallItem> CreateInstallItems()
     {
         return
         [
+            new InstallItem
+            {
+                Name = "Winget",
+                Method = InstallMethod.EmbeddedWinget
+            },
             new InstallItem
             {
                 Name = "NI Package Manager",
@@ -47,6 +54,8 @@ public sealed class InstallOrchestrator
 
     public void ScanInstalledPackages(IEnumerable<InstallItem> items, Action<Action>? uiInvoker = null)
     {
+        var wingetAvailable = PackageDetector.IsWingetAvailable();
+
         foreach (var item in items)
         {
             if (item.Status != InstallStatus.Pending)
@@ -56,6 +65,7 @@ public sealed class InstallOrchestrator
 
             var alreadyInstalled = item.Name switch
             {
+                "Winget" => wingetAvailable,
                 "NI Package Manager" => PackageDetector.IsNiPackageManagerInstalled(),
                 "Cursor" => PackageDetector.IsCursorInstalled(),
                 "Google Chrome" => PackageDetector.IsGoogleChromeInstalled(),
@@ -69,6 +79,15 @@ public sealed class InstallOrchestrator
                 {
                     item.Status = InstallStatus.AlreadyInstalled;
                     item.DetailMessage = "Detected existing installation.";
+                });
+                continue;
+            }
+
+            if (item.Method == InstallMethod.Winget && !wingetAvailable)
+            {
+                RunOnUi(uiInvoker, () =>
+                {
+                    item.DetailMessage = WaitingForWingetMessage;
                 });
             }
         }
@@ -107,6 +126,7 @@ public sealed class InstallOrchestrator
                     var result = item.Method switch
                     {
                         InstallMethod.EmbeddedExe => InstallEmbeddedPackage(item),
+                        InstallMethod.EmbeddedWinget => InstallWingetBootstrap(),
                         InstallMethod.Winget => InstallWingetPackage(item),
                         _ => new InstallResult(InstallStatus.Failed, "Unknown install method.")
                     };
@@ -166,6 +186,30 @@ public sealed class InstallOrchestrator
 
         var detail = string.IsNullOrWhiteSpace(result.StandardError)
             ? $"Installer exited with code {result.ExitCode}."
+            : result.StandardError;
+        return new InstallResult(InstallStatus.Failed, detail);
+    }
+
+    private static InstallResult InstallWingetBootstrap()
+    {
+        if (PackageDetector.IsWingetAvailable())
+        {
+            return new InstallResult(InstallStatus.AlreadyInstalled, "Detected existing installation.");
+        }
+
+        var result = WingetBootstrapper.InstallEmbeddedWinget(TimeSpan.FromMinutes(20));
+        if (result.ExitCode == 0 && PackageDetector.IsWingetAvailable())
+        {
+            return new InstallResult(InstallStatus.Installed, "Installation finished successfully.");
+        }
+
+        if (PackageDetector.IsWingetAvailable())
+        {
+            return new InstallResult(InstallStatus.Installed, "winget is available.");
+        }
+
+        var detail = string.IsNullOrWhiteSpace(result.StandardError)
+            ? $"Winget bootstrap exited with code {result.ExitCode}."
             : result.StandardError;
         return new InstallResult(InstallStatus.Failed, detail);
     }
