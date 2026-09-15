@@ -77,19 +77,19 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Jeremy\\.nuget\\packages\\": {}
+    "/home/ubuntu/.nuget/packages/": {}
   },
   "project": {
-    "version": "1.4.0",
+    "version": "1.4.1",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Jeremy\\Desktop\\Robotics\\v1.4\\JRBSI\\JRBSI.csproj",
+      "projectUniqueName": "/workspace/JRBSI/JRBSI.csproj",
       "projectName": "JRBSI",
-      "projectPath": "C:\\Users\\Jeremy\\Desktop\\Robotics\\v1.4\\JRBSI\\JRBSI.csproj",
-      "packagesPath": "C:\\Users\\Jeremy\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Jeremy\\Desktop\\Robotics\\v1.4\\JRBSI\\obj\\",
+      "projectPath": "/workspace/JRBSI/JRBSI.csproj",
+      "packagesPath": "/home/ubuntu/.nuget/packages/",
+      "outputPath": "/workspace/JRBSI/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\Jeremy\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "/home/ubuntu/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net8.0-windows"
@@ -142,7 +142,15 @@
             "version": "[8.0.31, 8.0.31]"
           },
           {
+            "name": "Microsoft.NETCore.App.Host.win-x64",
+            "version": "[8.0.31, 8.0.31]"
+          },
+          {
             "name": "Microsoft.NETCore.App.Runtime.win-x64",
+            "version": "[8.0.31, 8.0.31]"
+          },
+          {
+            "name": "Microsoft.WindowsDesktop.App.Ref",
             "version": "[8.0.31, 8.0.31]"
           },
           {
@@ -158,7 +166,7 @@
             "privateAssets": "none"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.425/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "/home/ubuntu/.dotnet/sdk/8.0.425/PortableRuntimeIdentifierGraph.json"
       }
     },
     "runtimes": {

@@ -4,17 +4,17 @@
 winexe
 C#
 .cs
-C:\Users\Jeremy\Desktop\Robotics\v1.4\JRBSI\obj\Release\net8.0-windows\win-x64\
+/workspace/JRBSI/obj/Release/net8.0-windows/win-x64/
 JRBSI
 none
 false
 TRACE;RELEASE;NET;NET8_0;NETCOREAPP
-C:\Users\Jeremy\Desktop\Robotics\v1.4\JRBSI\App.xaml
-3-1580949403
+/workspace/JRBSI/App.xaml
+3333688613
 
-81134945840
-198986609145
-MainWindow.xaml;Themes\Dark.xaml;Themes\Light.xaml;
+9-1657941177
+198-1767555571
+MainWindow.xaml;Themes/Dark.xaml;Themes/Light.xaml;
 
 False
 

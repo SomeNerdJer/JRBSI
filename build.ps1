@@ -87,7 +87,7 @@ try {
             /p:TraceSingleFileBundler=true
 
         $output = Join-Path $publishDir "JRBSI.exe"
-        $dest = Join-Path $Root "JRBSI_v1.4.exe"
+        $dest = Join-Path $Root "JRBSI_v1.4.1.exe"
         if (-not (Test-Path $output)) {
             Write-Error "Publish succeeded but $output was not created."
         }

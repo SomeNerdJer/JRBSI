@@ -1,4 +1,4 @@
-# Jeremy's Robotics Bulk Software Installer v1.4
+# Jeremy's Robotics Bulk Software Installer v1.4.1
 
 Bulk installer for laptop imaging for team 7030.
 
