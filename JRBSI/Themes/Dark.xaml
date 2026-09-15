@@ -1,0 +1,18 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#16181D" />
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#23262E" />
+    <SolidColorBrush x:Key="CardBorderBrush" Color="#3A3E48" />
+    <SolidColorBrush x:Key="HeaderBackgroundBrush" Color="#1E3A5F" />
+    <SolidColorBrush x:Key="HeaderTitleBrush" Color="White" />
+    <SolidColorBrush x:Key="HeaderSubtitleBrush" Color="#B0C4DE" />
+    <SolidColorBrush x:Key="HeaderNoteBrush" Color="#90CAF9" />
+    <SolidColorBrush x:Key="BodyTextBrush" Color="#B4BCC8" />
+    <SolidColorBrush x:Key="CardTitleBrush" Color="#F2F4F7" />
+    <SolidColorBrush x:Key="CardDetailBrush" Color="#8B93A1" />
+    <SolidColorBrush x:Key="SummaryTextBrush" Color="#90CAF9" />
+    <SolidColorBrush x:Key="ButtonBackgroundBrush" Color="#2E6BB0" />
+    <SolidColorBrush x:Key="ButtonForegroundBrush" Color="White" />
+    <SolidColorBrush x:Key="ProgressTrackBrush" Color="#3A3E48" />
+    <SolidColorBrush x:Key="ProgressFillBrush" Color="#4FC3F7" />
+</ResourceDictionary>

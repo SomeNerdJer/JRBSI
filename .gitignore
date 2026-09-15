@@ -1,0 +1,4 @@
+# Standalone published exe is attached to the GitHub Release, not the git tree
+# (GitHub rejects regular git files over 100 MB).
+/JRBSI_v1.4.exe
+hosttrace.log
