@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
@@ -31,16 +32,12 @@ public partial class MainWindow : Window
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
-        SummaryTextBlock.Text = "Scanning for already installed software...";
         InstallButton.IsEnabled = false;
 
-        var scanProgress = new Progress<string>(message => SummaryTextBlock.Text = message);
         await Task.Run(() => _orchestrator.ScanInstalledPackages(
             _installItems,
-            action => Dispatcher.Invoke(action),
-            scanProgress));
+            action => Dispatcher.Invoke(action)));
 
-        SummaryTextBlock.Text = "Ready — click Install to begin.";
         InstallButton.IsEnabled = true;
     }
 
@@ -81,24 +78,25 @@ public partial class MainWindow : Window
         _isInstalling = true;
         InstallButton.IsEnabled = false;
 
-        var progress = new Progress<string>(message => SummaryTextBlock.Text = message);
-
         try
         {
             await _orchestrator.RunInstallAsync(
                 _installItems,
-                progress,
-                action => Dispatcher.Invoke(action));
+                uiInvoker: action => Dispatcher.Invoke(action));
 
             MessageBox.Show(
                 $"Don't forget to install WPILib{Environment.NewLine}{Environment.NewLine}{InstallOrchestrator.WpilibUrl}",
                 "Don't forget WPILib",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
+
+            Process.Start(new ProcessStartInfo(InstallOrchestrator.WpilibUrl)
+            {
+                UseShellExecute = true
+            });
         }
         catch (Exception ex)
         {
-            SummaryTextBlock.Text = "Installation stopped due to an unexpected error.";
             MessageBox.Show(
                 ex.Message,
                 "Installation Error",
@@ -107,11 +105,6 @@ public partial class MainWindow : Window
         }
         finally
         {
-            if (SummaryTextBlock.Text.StartsWith("Installing", StringComparison.Ordinal))
-            {
-                SummaryTextBlock.Text = "Complete";
-            }
-
             _isInstalling = false;
             InstallButton.IsEnabled = true;
         }
