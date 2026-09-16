@@ -10,7 +10,7 @@
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <AssemblyName>JRBSI</AssemblyName>
     <RootNamespace>JRBSI</RootNamespace>
-    <Version>1.5.4</Version>
+    <Version>1.5.5</Version>
     <Product>Jeremy's Robotics Bulk Software Installer</Product>
     <Company>Jeremedia LLC</Company>
     <SelfContained>true</SelfContained>

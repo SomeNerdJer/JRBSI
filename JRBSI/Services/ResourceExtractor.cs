@@ -14,9 +14,10 @@ public static class ResourceExtractor
 
     public static string ExtractEmbeddedResource(string resourceName, string fileName)
     {
-        Directory.CreateDirectory(TempDirectory);
+        var runDirectory = Path.Combine(TempDirectory, "runs", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(runDirectory);
 
-        var destinationPath = Path.Combine(TempDirectory, fileName);
+        var destinationPath = Path.Combine(runDirectory, fileName);
         var assembly = Assembly.GetExecutingAssembly();
         var fullResourceName = assembly
             .GetManifestResourceNames()
@@ -27,10 +28,23 @@ public static class ResourceExtractor
             throw new FileNotFoundException($"Embedded resource not found: {resourceName}");
         }
 
-        using var resourceStream = assembly.GetManifestResourceStream(fullResourceName)
-            ?? throw new FileNotFoundException($"Unable to read embedded resource: {resourceName}");
-        using var fileStream = File.Create(destinationPath);
-        resourceStream.CopyTo(fileStream);
+        try
+        {
+            using var resourceStream = assembly.GetManifestResourceStream(fullResourceName)
+                ?? throw new FileNotFoundException($"Unable to read embedded resource: {resourceName}");
+            using var fileStream = new FileStream(
+                destinationPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None);
+            resourceStream.CopyTo(fileStream);
+        }
+        catch (IOException ex)
+        {
+            throw new IOException(
+                $"Could not extract {fileName}. Close any running installers or other JRBSI windows and try again.",
+                ex);
+        }
 
         if (!IsValidWindowsExecutable(destinationPath))
         {

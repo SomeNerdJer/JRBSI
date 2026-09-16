@@ -113,7 +113,38 @@ public static class ProcessRunner
         TimeSpan timeout,
         IProgress<string>? activityProgress = null)
     {
-        return RunProcess(exePath, arguments, timeout, activityProgress);
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = exePath,
+            Arguments = arguments,
+            UseShellExecute = true,
+            WindowStyle = ProcessWindowStyle.Hidden,
+            WorkingDirectory = Path.GetDirectoryName(exePath) ?? Environment.CurrentDirectory
+        };
+
+        using var process = Process.Start(startInfo)
+            ?? throw new InvalidOperationException($"Failed to start installer: {exePath}");
+
+        activityProgress?.Report($"Installer running (PID {process.Id})...");
+
+        if (!process.WaitForExit((int)timeout.TotalMilliseconds))
+        {
+            try
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            catch
+            {
+                // Best effort cleanup for hung processes.
+            }
+
+            throw new TimeoutException($"Process timed out: {exePath} {arguments}");
+        }
+
+        ResourceExtractor.AppendLog($"Command: {exePath} {arguments}");
+        ResourceExtractor.AppendLog($"Exit code: {process.ExitCode}");
+
+        return new ProcessResult(process.ExitCode, string.Empty, string.Empty);
     }
 
     public static ProcessResult RunWingetInstall(
