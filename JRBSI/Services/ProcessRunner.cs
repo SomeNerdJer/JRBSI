@@ -29,7 +29,11 @@ public static class ProcessRunner
         return "winget";
     }
 
-    public static ProcessResult RunProcess(string fileName, string arguments, TimeSpan timeout)
+    public static ProcessResult RunProcess(
+        string fileName,
+        string arguments,
+        TimeSpan timeout,
+        IProgress<string>? activityProgress = null)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -52,6 +56,7 @@ public static class ProcessRunner
             if (args.Data is not null)
             {
                 outputBuilder.AppendLine(args.Data);
+                ReportActivityLine(activityProgress, args.Data);
             }
         };
 
@@ -60,6 +65,7 @@ public static class ProcessRunner
             if (args.Data is not null)
             {
                 errorBuilder.AppendLine(args.Data);
+                ReportActivityLine(activityProgress, args.Data);
             }
         };
 
@@ -98,15 +104,38 @@ public static class ProcessRunner
         return new ProcessResult(process.ExitCode, output, error);
     }
 
-    public static ProcessResult RunEmbeddedInstaller(string exePath, string arguments, TimeSpan timeout)
+    public static ProcessResult RunEmbeddedInstaller(
+        string exePath,
+        string arguments,
+        TimeSpan timeout,
+        IProgress<string>? activityProgress = null)
     {
-        return RunProcess(exePath, arguments, timeout);
+        return RunProcess(exePath, arguments, timeout, activityProgress);
     }
 
-    public static ProcessResult RunWingetInstall(string packageName, TimeSpan timeout)
+    public static ProcessResult RunWingetInstall(
+        string packageName,
+        TimeSpan timeout,
+        IProgress<string>? activityProgress = null)
     {
         var arguments =
             $"install \"{packageName}\" --silent --accept-source-agreements --accept-package-agreements --disable-interactivity";
-        return RunProcess(ResolveWingetExecutable(), arguments, timeout);
+        return RunProcess(ResolveWingetExecutable(), arguments, timeout, activityProgress);
+    }
+
+    private static void ReportActivityLine(IProgress<string>? activityProgress, string line)
+    {
+        if (activityProgress is null)
+        {
+            return;
+        }
+
+        var trimmed = line.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return;
+        }
+
+        activityProgress.Report(trimmed.Length <= 120 ? trimmed : $"{trimmed[..117]}...");
     }
 }

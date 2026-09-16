@@ -12,13 +12,16 @@ public static class WingetBootstrapper
         "Microsoft.WindowsAppRuntime.1.8_x64.appx"
     ];
 
-    public static ProcessResult InstallEmbeddedWinget(TimeSpan timeout)
+    public static ProcessResult InstallEmbeddedWinget(
+        TimeSpan timeout,
+        IProgress<string>? activityProgress = null)
     {
         if (PackageDetector.IsWingetAvailable())
         {
             return new ProcessResult(0, "winget is already available.", string.Empty);
         }
 
+        activityProgress?.Report("Extracting App Installer package...");
         var packagePath = ResourceExtractor.ExtractEmbeddedResource(
             "Microsoft.DesktopAppInstaller.msixbundle",
             "Microsoft.DesktopAppInstaller.msixbundle");
@@ -34,13 +37,19 @@ public static class WingetBootstrapper
         // packages are ignored so re-imaging stays idempotent.
         foreach (var dependencyPath in dependencyPaths)
         {
+            activityProgress?.Report($"Installing dependency {Path.GetFileName(dependencyPath)}...");
             var depArgs =
                 $"-NoProfile -ExecutionPolicy Bypass -Command \"Add-AppxPackage -Path '{EscapeForPowerShell(dependencyPath)}'\"";
-            var depResult = ProcessRunner.RunProcess("powershell.exe", depArgs, TimeSpan.FromMinutes(5));
+            var depResult = ProcessRunner.RunProcess(
+                "powershell.exe",
+                depArgs,
+                TimeSpan.FromMinutes(5),
+                activityProgress);
             ResourceExtractor.AppendLog(
                 $"Dependency install '{Path.GetFileName(dependencyPath)}' exit {depResult.ExitCode}");
         }
 
+        activityProgress?.Report("Provisioning App Installer with DISM...");
         var dismArgs = new StringBuilder();
         dismArgs.Append("/Online /Add-ProvisionedAppxPackage ");
         dismArgs.Append($"/PackagePath:\"{packagePath}\" ");
@@ -53,27 +62,30 @@ public static class WingetBootstrapper
         var provisionResult = ProcessRunner.RunProcess(
             "dism.exe",
             dismArgs.ToString(),
-            timeout);
+            timeout,
+            activityProgress);
 
-        // Register App Installer for the elevating user so winget.exe resolves immediately.
+        activityProgress?.Report("Registering winget for this user...");
         ProcessRunner.RunProcess(
             "powershell.exe",
             "-NoProfile -ExecutionPolicy Bypass -Command \"Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\"",
-            TimeSpan.FromMinutes(5));
+            TimeSpan.FromMinutes(5),
+            activityProgress);
 
         ProcessRunner.RefreshPathEnvironment();
 
         if (!PackageDetector.IsWingetAvailable())
         {
-            // Fallback for client SKUs where provisioning alone does not register the alias yet.
+            activityProgress?.Report("Installing App Installer for current user...");
             var addArgs =
                 $"-NoProfile -ExecutionPolicy Bypass -Command \"Add-AppxPackage -Path '{EscapeForPowerShell(packagePath)}'\"";
-            ProcessRunner.RunProcess("powershell.exe", addArgs, TimeSpan.FromMinutes(10));
+            ProcessRunner.RunProcess("powershell.exe", addArgs, TimeSpan.FromMinutes(10), activityProgress);
             ProcessRunner.RefreshPathEnvironment();
         }
 
         for (var attempt = 0; attempt < 15; attempt++)
         {
+            activityProgress?.Report($"Verifying winget availability ({attempt + 1}/15)...");
             if (PackageDetector.IsWingetAvailable())
             {
                 return new ProcessResult(0, "winget installed and verified.", provisionResult.StandardOutput);

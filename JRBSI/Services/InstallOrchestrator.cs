@@ -125,16 +125,18 @@ public sealed class InstallOrchestrator
                 RunOnUi(uiInvoker, () =>
                 {
                     item.Status = InstallStatus.Installing;
-                    item.DetailMessage = string.Empty;
+                    item.DetailMessage = "Starting...";
                 });
+
+                var activity = CreateItemActivity(item, uiInvoker);
 
                 try
                 {
                     var result = item.Method switch
                     {
-                        InstallMethod.EmbeddedExe => InstallEmbeddedPackage(item),
-                        InstallMethod.EmbeddedWinget => InstallWingetBootstrap(),
-                        InstallMethod.Winget => InstallWingetPackage(item),
+                        InstallMethod.EmbeddedExe => InstallEmbeddedPackage(item, activity),
+                        InstallMethod.EmbeddedWinget => InstallWingetBootstrap(activity),
+                        InstallMethod.Winget => InstallWingetPackage(item, activity),
                         _ => new InstallResult(InstallStatus.Failed, "Unknown install method.")
                     };
 
@@ -170,9 +172,15 @@ public sealed class InstallOrchestrator
         uiInvoker(action);
     }
 
+    private static IProgress<string> CreateItemActivity(InstallItem item, Action<Action>? uiInvoker)
+    {
+        return new Progress<string>(message =>
+            RunOnUi(uiInvoker, () => item.DetailMessage = message));
+    }
+
     private sealed record InstallResult(InstallStatus Status, string DetailMessage);
 
-    private static InstallResult InstallEmbeddedPackage(InstallItem item)
+    private static InstallResult InstallEmbeddedPackage(InstallItem item, IProgress<string> activity)
     {
         if (string.IsNullOrWhiteSpace(item.EmbeddedResourceName) ||
             string.IsNullOrWhiteSpace(item.ExeFileName))
@@ -180,11 +188,15 @@ public sealed class InstallOrchestrator
             return new InstallResult(InstallStatus.Failed, "Missing embedded installer configuration.");
         }
 
+        activity.Report("Extracting installer...");
         var exePath = ResourceExtractor.ExtractEmbeddedExe(item.EmbeddedResourceName, item.ExeFileName);
+        activity.Report($"Running {item.ExeFileName} (this may take several minutes)...");
+
         var result = ProcessRunner.RunEmbeddedInstaller(
             exePath,
             item.Arguments ?? string.Empty,
-            TimeSpan.FromHours(2));
+            TimeSpan.FromHours(2),
+            activity);
 
         if (result.ExitCode == 0)
         {
@@ -197,14 +209,14 @@ public sealed class InstallOrchestrator
         return new InstallResult(InstallStatus.Failed, detail);
     }
 
-    private static InstallResult InstallWingetBootstrap()
+    private static InstallResult InstallWingetBootstrap(IProgress<string> activity)
     {
         if (PackageDetector.IsWingetAvailable())
         {
             return new InstallResult(InstallStatus.AlreadyInstalled, "Detected existing installation.");
         }
 
-        var result = WingetBootstrapper.InstallEmbeddedWinget(TimeSpan.FromMinutes(20));
+        var result = WingetBootstrapper.InstallEmbeddedWinget(TimeSpan.FromMinutes(20), activity);
         if (result.ExitCode == 0 && PackageDetector.IsWingetAvailable())
         {
             return new InstallResult(InstallStatus.Installed, "Installation finished successfully.");
@@ -221,7 +233,7 @@ public sealed class InstallOrchestrator
         return new InstallResult(InstallStatus.Failed, detail);
     }
 
-    private static InstallResult InstallWingetPackage(InstallItem item)
+    private static InstallResult InstallWingetPackage(InstallItem item, IProgress<string> activity)
     {
         if (string.IsNullOrWhiteSpace(item.WingetPackageName))
         {
@@ -233,7 +245,9 @@ public sealed class InstallOrchestrator
             return new InstallResult(InstallStatus.Failed, "winget is not available on this system.");
         }
 
-        var result = ProcessRunner.RunWingetInstall(item.WingetPackageName, TimeSpan.FromMinutes(30));
+        activity.Report($"Running winget install \"{item.WingetPackageName}\"...");
+
+        var result = ProcessRunner.RunWingetInstall(item.WingetPackageName, TimeSpan.FromMinutes(30), activity);
 
         if (result.ExitCode == 0)
         {
