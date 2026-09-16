@@ -2,5 +2,6 @@
 # (GitHub rejects regular git files over 100 MB).
 /JRBSI_v1.4.exe
 /JRBSI_v1.4.1.exe
+/JRBSI_v1.5.exe
 /JRBSI.exe
 hosttrace.log

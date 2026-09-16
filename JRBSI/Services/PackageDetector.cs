@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO;
 using Microsoft.Win32;
 
@@ -6,7 +5,53 @@ namespace JRBSI.Services;
 
 public static class PackageDetector
 {
-    private const string PhoenixTunerPackageId = "9NVV4PWDW27Z";
+    public sealed class RegistryDisplayNameCache
+    {
+        private readonly List<string> _displayNames = [];
+
+        public static RegistryDisplayNameCache Load()
+        {
+            var cache = new RegistryDisplayNameCache();
+            cache.LoadDisplayNames();
+            return cache;
+        }
+
+        public bool ContainsDisplayNameFragment(string displayNameFragment)
+        {
+            foreach (var displayName in _displayNames)
+            {
+                if (displayName.Contains(displayNameFragment, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void LoadDisplayNames()
+        {
+            foreach (var view in new[] { RegistryView.Registry64, RegistryView.Registry32 })
+            {
+                using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view);
+                using var uninstallKey = baseKey.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall");
+                if (uninstallKey is null)
+                {
+                    continue;
+                }
+
+                foreach (var subKeyName in uninstallKey.GetSubKeyNames())
+                {
+                    using var subKey = uninstallKey.OpenSubKey(subKeyName);
+                    var displayName = subKey?.GetValue("DisplayName") as string;
+                    if (!string.IsNullOrWhiteSpace(displayName))
+                    {
+                        _displayNames.Add(displayName);
+                    }
+                }
+            }
+        }
+    }
 
     public static bool IsNiPackageManagerInstalled()
     {
@@ -20,7 +65,7 @@ public static class PackageDetector
         return File.Exists(Path.Combine(programFiles, "National Instruments", "NI Package Manager", "NIPackageManager.exe"));
     }
 
-    public static bool IsCursorInstalled()
+    public static bool IsCursorInstalled(RegistryDisplayNameCache? registryCache = null)
     {
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         if (File.Exists(Path.Combine(localAppData, "Programs", "cursor", "Cursor.exe")))
@@ -28,10 +73,10 @@ public static class PackageDetector
             return true;
         }
 
-        return RegistryContainsDisplayName("Cursor");
+        return registryCache?.ContainsDisplayNameFragment("Cursor") ?? ContainsDisplayNameFragment("Cursor");
     }
 
-    public static bool IsGoogleChromeInstalled()
+    public static bool IsGoogleChromeInstalled(RegistryDisplayNameCache? registryCache = null)
     {
         var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
         if (File.Exists(Path.Combine(programFiles, "Google", "Chrome", "Application", "chrome.exe")))
@@ -45,30 +90,14 @@ public static class PackageDetector
             return true;
         }
 
-        return RegistryContainsDisplayName("Google Chrome");
+        return registryCache?.ContainsDisplayNameFragment("Google Chrome") ??
+               ContainsDisplayNameFragment("Google Chrome");
     }
 
-    public static bool IsPhoenixTunerInstalled()
+    public static bool IsPhoenixTunerInstalled(RegistryDisplayNameCache? registryCache = null)
     {
-        if (RegistryContainsDisplayName("Phoenix Tuner X"))
-        {
-            return true;
-        }
-
-        try
-        {
-            var result = ProcessRunner.RunProcess(
-                ProcessRunner.ResolveWingetExecutable(),
-                $"list --id {PhoenixTunerPackageId}",
-                TimeSpan.FromMinutes(2));
-
-            return result.ExitCode == 0 &&
-                   result.StandardOutput.Contains(PhoenixTunerPackageId, StringComparison.OrdinalIgnoreCase);
-        }
-        catch
-        {
-            return false;
-        }
+        return registryCache?.ContainsDisplayNameFragment("Phoenix Tuner X") ??
+               ContainsDisplayNameFragment("Phoenix Tuner X");
     }
 
     public static bool IsWingetAvailable()
@@ -87,29 +116,8 @@ public static class PackageDetector
         }
     }
 
-    private static bool RegistryContainsDisplayName(string displayNameFragment)
+    private static bool ContainsDisplayNameFragment(string displayNameFragment)
     {
-        foreach (var view in new[] { RegistryView.Registry64, RegistryView.Registry32 })
-        {
-            using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view);
-            using var uninstallKey = baseKey.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall");
-            if (uninstallKey is null)
-            {
-                continue;
-            }
-
-            foreach (var subKeyName in uninstallKey.GetSubKeyNames())
-            {
-                using var subKey = uninstallKey.OpenSubKey(subKeyName);
-                var displayName = subKey?.GetValue("DisplayName") as string;
-                if (!string.IsNullOrWhiteSpace(displayName) &&
-                    displayName.Contains(displayNameFragment, StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return RegistryDisplayNameCache.Load().ContainsDisplayNameFragment(displayNameFragment);
     }
 }

@@ -52,9 +52,14 @@ public sealed class InstallOrchestrator
         ];
     }
 
-    public void ScanInstalledPackages(IEnumerable<InstallItem> items, Action<Action>? uiInvoker = null)
+    public void ScanInstalledPackages(
+        IEnumerable<InstallItem> items,
+        Action<Action>? uiInvoker = null,
+        IProgress<string>? scanProgress = null)
     {
+        scanProgress?.Report("Checking winget...");
         var wingetAvailable = PackageDetector.IsWingetAvailable();
+        var registryCache = PackageDetector.RegistryDisplayNameCache.Load();
 
         foreach (var item in items)
         {
@@ -63,13 +68,15 @@ public sealed class InstallOrchestrator
                 continue;
             }
 
+            scanProgress?.Report($"Checking {item.Name}...");
+
             var alreadyInstalled = item.Name switch
             {
                 "Winget" => wingetAvailable,
                 "NI Package Manager" => PackageDetector.IsNiPackageManagerInstalled(),
-                "Cursor" => PackageDetector.IsCursorInstalled(),
-                "Google Chrome" => PackageDetector.IsGoogleChromeInstalled(),
-                "Phoenix Tuner X" => PackageDetector.IsPhoenixTunerInstalled(),
+                "Cursor" => PackageDetector.IsCursorInstalled(registryCache),
+                "Google Chrome" => PackageDetector.IsGoogleChromeInstalled(registryCache),
+                "Phoenix Tuner X" => PackageDetector.IsPhoenixTunerInstalled(registryCache),
                 _ => false
             };
 

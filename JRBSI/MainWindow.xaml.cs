@@ -34,7 +34,11 @@ public partial class MainWindow : Window
         SummaryTextBlock.Text = "Scanning for already installed software...";
         InstallButton.IsEnabled = false;
 
-        await Task.Run(() => _orchestrator.ScanInstalledPackages(_installItems, action => Dispatcher.Invoke(action)));
+        var scanProgress = new Progress<string>(message => SummaryTextBlock.Text = message);
+        await Task.Run(() => _orchestrator.ScanInstalledPackages(
+            _installItems,
+            action => Dispatcher.Invoke(action),
+            scanProgress));
 
         SummaryTextBlock.Text = "Ready — click Install to begin.";
         InstallButton.IsEnabled = true;
