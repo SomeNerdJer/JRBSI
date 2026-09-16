@@ -18,22 +18,16 @@ public static class PackageDetector
             return cache;
         }
 
-        public bool ContainsDisplayNameFragment(string displayNameFragment)
-        {
-            return _entries.Any(entry =>
-                entry.DisplayName.Contains(displayNameFragment, StringComparison.OrdinalIgnoreCase));
-        }
-
-        public string? FindInstallPath(string displayNameFragment)
+        public string? FindVerifiedInstallPath(string productKey)
         {
             foreach (var entry in _entries)
             {
-                if (!entry.DisplayName.Contains(displayNameFragment, StringComparison.OrdinalIgnoreCase))
+                if (!IsDisplayNameMatch(entry.DisplayName, productKey))
                 {
                     continue;
                 }
 
-                if (!string.IsNullOrWhiteSpace(entry.InstallPath))
+                if (IsVerifiedInstallPath(entry.InstallPath))
                 {
                     return entry.InstallPath;
                 }
@@ -81,12 +75,6 @@ public static class PackageDetector
             return new InstallDetection(true, exePath);
         }
 
-        if (RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64)
-                .OpenSubKey(@"SOFTWARE\National Instruments\NI Package Manager") is not null)
-        {
-            return new InstallDetection(true, installDir);
-        }
-
         return new InstallDetection(false, null);
     }
 
@@ -99,15 +87,11 @@ public static class PackageDetector
             return new InstallDetection(true, exePath);
         }
 
-        var registryPath = registryCache?.FindInstallPath("Cursor") ??
-                           FindInstallPathInRegistry("Cursor");
-        if (registryPath is not null ||
-            (registryCache?.ContainsDisplayNameFragment("Cursor") ?? ContainsDisplayNameFragment("Cursor")))
-        {
-            return new InstallDetection(true, registryPath);
-        }
-
-        return new InstallDetection(false, null);
+        var registryPath = registryCache?.FindVerifiedInstallPath("Cursor") ??
+                           FindVerifiedInstallPathInRegistry("Cursor");
+        return registryPath is null
+            ? new InstallDetection(false, null)
+            : new InstallDetection(true, registryPath);
     }
 
     public static InstallDetection DetectGoogleChrome(RegistryDisplayNameCache? registryCache = null)
@@ -126,30 +110,20 @@ public static class PackageDetector
             return new InstallDetection(true, exePathX86);
         }
 
-        var registryPath = registryCache?.FindInstallPath("Google Chrome") ??
-                           FindInstallPathInRegistry("Google Chrome");
-        if (registryPath is not null ||
-            (registryCache?.ContainsDisplayNameFragment("Google Chrome") ??
-             ContainsDisplayNameFragment("Google Chrome")))
-        {
-            return new InstallDetection(true, registryPath);
-        }
-
-        return new InstallDetection(false, null);
+        var registryPath = registryCache?.FindVerifiedInstallPath("Google Chrome") ??
+                           FindVerifiedInstallPathInRegistry("Google Chrome");
+        return registryPath is null
+            ? new InstallDetection(false, null)
+            : new InstallDetection(true, registryPath);
     }
 
     public static InstallDetection DetectPhoenixTuner(RegistryDisplayNameCache? registryCache = null)
     {
-        var registryPath = registryCache?.FindInstallPath("Phoenix Tuner X") ??
-                           FindInstallPathInRegistry("Phoenix Tuner X");
-        if (registryPath is not null ||
-            (registryCache?.ContainsDisplayNameFragment("Phoenix Tuner X") ??
-             ContainsDisplayNameFragment("Phoenix Tuner X")))
-        {
-            return new InstallDetection(true, registryPath);
-        }
-
-        return new InstallDetection(false, null);
+        var registryPath = registryCache?.FindVerifiedInstallPath("Phoenix Tuner X") ??
+                           FindVerifiedInstallPathInRegistry("Phoenix Tuner X");
+        return registryPath is null
+            ? new InstallDetection(false, null)
+            : new InstallDetection(true, registryPath);
     }
 
     public static InstallDetection DetectWinget()
@@ -159,8 +133,7 @@ public static class PackageDetector
             return new InstallDetection(false, null);
         }
 
-        var wingetPath = ProcessRunner.ResolveWingetExecutable();
-        return new InstallDetection(true, wingetPath);
+        return new InstallDetection(true, ProcessRunner.ResolveWingetExecutable());
     }
 
     public static bool IsNiPackageManagerInstalled() => DetectNiPackageManager().IsInstalled;
@@ -197,14 +170,35 @@ public static class PackageDetector
             : $"Installed at: {installPath}";
     }
 
-    private static bool ContainsDisplayNameFragment(string displayNameFragment)
+    private static string? FindVerifiedInstallPathInRegistry(string productKey)
     {
-        return RegistryDisplayNameCache.Load().ContainsDisplayNameFragment(displayNameFragment);
+        return RegistryDisplayNameCache.Load().FindVerifiedInstallPath(productKey);
     }
 
-    private static string? FindInstallPathInRegistry(string displayNameFragment)
+    private static bool IsDisplayNameMatch(string displayName, string productKey)
     {
-        return RegistryDisplayNameCache.Load().FindInstallPath(displayNameFragment);
+        return productKey switch
+        {
+            "Cursor" => displayName.Equals("Cursor", StringComparison.OrdinalIgnoreCase) ||
+                        displayName.StartsWith("Cursor ", StringComparison.OrdinalIgnoreCase),
+            _ => displayName.Contains(productKey, StringComparison.OrdinalIgnoreCase)
+        };
+    }
+
+    private static bool IsVerifiedInstallPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        var normalized = path.Trim().Trim('"');
+        if (File.Exists(normalized))
+        {
+            return true;
+        }
+
+        return Directory.Exists(normalized);
     }
 
     private static string? ResolveInstallPath(RegistryKey subKey)
@@ -212,13 +206,21 @@ public static class PackageDetector
         var installLocation = subKey.GetValue("InstallLocation") as string;
         if (!string.IsNullOrWhiteSpace(installLocation))
         {
-            return installLocation.Trim().TrimEnd('\\', '"');
+            var normalized = installLocation.Trim().TrimEnd('\\', '"');
+            if (IsVerifiedInstallPath(normalized))
+            {
+                return normalized;
+            }
         }
 
         var displayIcon = subKey.GetValue("DisplayIcon") as string;
         if (!string.IsNullOrWhiteSpace(displayIcon))
         {
-            return ExtractExecutablePath(displayIcon);
+            var iconPath = ExtractExecutablePath(displayIcon);
+            if (iconPath is not null)
+            {
+                return iconPath;
+            }
         }
 
         var uninstallString = subKey.GetValue("UninstallString") as string;
@@ -244,18 +246,6 @@ public static class PackageDetector
             trimmed = trimmed[..commaIndex].Trim().Trim('"');
         }
 
-        if (File.Exists(trimmed))
-        {
-            return trimmed;
-        }
-
-        if (Directory.Exists(trimmed))
-        {
-            return trimmed;
-        }
-
-        return trimmed.Contains('\\') || trimmed.Contains('/')
-            ? trimmed
-            : null;
+        return IsVerifiedInstallPath(trimmed) ? trimmed : null;
     }
 }

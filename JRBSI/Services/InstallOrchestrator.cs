@@ -57,6 +57,15 @@ public sealed class InstallOrchestrator
         Action<Action>? uiInvoker = null,
         IProgress<string>? scanProgress = null)
     {
+        foreach (var item in items)
+        {
+            RunOnUi(uiInvoker, () =>
+            {
+                item.Status = InstallStatus.Pending;
+                item.DetailMessage = string.Empty;
+            });
+        }
+
         scanProgress?.Report("Checking winget...");
         var wingetDetection = PackageDetector.DetectWinget();
         var wingetAvailable = wingetDetection.IsInstalled;
@@ -64,11 +73,6 @@ public sealed class InstallOrchestrator
 
         foreach (var item in items)
         {
-            if (item.Status != InstallStatus.Pending)
-            {
-                continue;
-            }
-
             scanProgress?.Report($"Checking {item.Name}...");
 
             var detection = item.Name switch
