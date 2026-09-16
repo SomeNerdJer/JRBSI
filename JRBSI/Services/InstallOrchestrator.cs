@@ -58,7 +58,8 @@ public sealed class InstallOrchestrator
         IProgress<string>? scanProgress = null)
     {
         scanProgress?.Report("Checking winget...");
-        var wingetAvailable = PackageDetector.IsWingetAvailable();
+        var wingetDetection = PackageDetector.DetectWinget();
+        var wingetAvailable = wingetDetection.IsInstalled;
         var registryCache = PackageDetector.RegistryDisplayNameCache.Load();
 
         foreach (var item in items)
@@ -70,22 +71,23 @@ public sealed class InstallOrchestrator
 
             scanProgress?.Report($"Checking {item.Name}...");
 
-            var alreadyInstalled = item.Name switch
+            var detection = item.Name switch
             {
-                "Winget" => wingetAvailable,
-                "NI Package Manager" => PackageDetector.IsNiPackageManagerInstalled(),
-                "Cursor" => PackageDetector.IsCursorInstalled(registryCache),
-                "Google Chrome" => PackageDetector.IsGoogleChromeInstalled(registryCache),
-                "Phoenix Tuner X" => PackageDetector.IsPhoenixTunerInstalled(registryCache),
-                _ => false
+                "Winget" => wingetDetection,
+                "NI Package Manager" => PackageDetector.DetectNiPackageManager(),
+                "Cursor" => PackageDetector.DetectCursor(registryCache),
+                "Google Chrome" => PackageDetector.DetectGoogleChrome(registryCache),
+                "Phoenix Tuner X" => PackageDetector.DetectPhoenixTuner(registryCache),
+                _ => new PackageDetector.InstallDetection(false, null)
             };
 
-            if (alreadyInstalled)
+            if (detection.IsInstalled)
             {
+                var detailMessage = PackageDetector.FormatDetectedInstallMessage(detection.InstallPath);
                 RunOnUi(uiInvoker, () =>
                 {
                     item.Status = InstallStatus.AlreadyInstalled;
-                    item.DetailMessage = "Detected existing installation.";
+                    item.DetailMessage = detailMessage;
                 });
                 continue;
             }
@@ -211,9 +213,12 @@ public sealed class InstallOrchestrator
 
     private static InstallResult InstallWingetBootstrap(IProgress<string> activity)
     {
-        if (PackageDetector.IsWingetAvailable())
+        var existingWinget = PackageDetector.DetectWinget();
+        if (existingWinget.IsInstalled)
         {
-            return new InstallResult(InstallStatus.AlreadyInstalled, "Detected existing installation.");
+            return new InstallResult(
+                InstallStatus.AlreadyInstalled,
+                PackageDetector.FormatDetectedInstallMessage(existingWinget.InstallPath));
         }
 
         var result = WingetBootstrapper.InstallEmbeddedWinget(TimeSpan.FromMinutes(20), activity);
