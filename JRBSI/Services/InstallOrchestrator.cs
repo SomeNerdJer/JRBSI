@@ -209,10 +209,23 @@ public sealed class InstallOrchestrator
             return new InstallResult(InstallStatus.Installed, "Installation finished successfully.");
         }
 
+        if (IsSuccessfulEmbeddedExit(item, result.ExitCode))
+        {
+            return new InstallResult(
+                InstallStatus.Installed,
+                "Installation finished successfully. A system reboot is required to complete setup.");
+        }
+
         var detail = string.IsNullOrWhiteSpace(result.StandardError)
             ? $"Installer exited with code {result.ExitCode}."
             : result.StandardError;
         return new InstallResult(InstallStatus.Failed, detail);
+    }
+
+    private static bool IsSuccessfulEmbeddedExit(InstallItem item, int exitCode)
+    {
+        return item.ExeFileName?.Equals("nitools.exe", StringComparison.OrdinalIgnoreCase) == true &&
+               exitCode == ProcessRunner.NiInstallRebootRequiredExitCode;
     }
 
     private static InstallResult InstallWingetBootstrap(IProgress<string> activity)

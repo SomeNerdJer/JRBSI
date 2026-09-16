@@ -10,6 +10,9 @@ public static class ProcessRunner
 {
     public const int WingetAlreadyInstalledExitCode = unchecked((int)0x8B15000B);
 
+    // NI Package Manager reports success with reboot required.
+    public const int NiInstallRebootRequiredExitCode = -125071;
+
     public static void RefreshPathEnvironment()
     {
         var machine = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine) ?? string.Empty;

@@ -32,7 +32,36 @@ public static class ResourceExtractor
         using var fileStream = File.Create(destinationPath);
         resourceStream.CopyTo(fileStream);
 
+        if (!IsValidWindowsExecutable(destinationPath))
+        {
+            throw new InvalidDataException(
+                $"{fileName} is not a valid Windows installer. " +
+                "The embedded file may be a Git LFS pointer instead of the actual installer.");
+        }
+
         return destinationPath;
+    }
+
+    public static bool IsValidWindowsExecutable(string path)
+    {
+        if (!File.Exists(path))
+        {
+            return false;
+        }
+
+        var fileInfo = new FileInfo(path);
+        if (fileInfo.Length < 1024)
+        {
+            var prefix = File.ReadAllText(path);
+            if (prefix.StartsWith("version https://git-lfs.github.com/spec/v1", StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        Span<byte> header = stackalloc byte[2];
+        using var stream = File.OpenRead(path);
+        return stream.Read(header) == 2 && header[0] == 0x4D && header[1] == 0x5A;
     }
 
     public static string LogFilePath => Path.Combine(TempDirectory, "install.log");
