@@ -56,7 +56,7 @@
                                    FontWeight="Bold"
                                    Foreground="{DynamicResource HeaderTitleBrush}"
                                    TextWrapping="Wrap" />
-                        <TextBlock Text="Property of Jeremedia LLC  •  Jeremedia.net"
+                        <TextBlock Text="Property of Pink Fedora Software  •  Jeremedia.net"
                                    FontSize="13"
                                    Foreground="{DynamicResource HeaderSubtitleBrush}"
                                    Margin="0,6,0,0" />
