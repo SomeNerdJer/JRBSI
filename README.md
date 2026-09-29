@@ -1,6 +1,5 @@
-# Jeremy's Robotics Bulk Software Installer v2.0
+# Jeremy's Robotics Bulk Software Installer v2.0.1
 
 Bulk installer for laptop imaging for team 7030
 
-Jeremedia.net
-Jeremedia LLC
+**Property of Pink Fedora Software**
